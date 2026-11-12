@@ -63,7 +63,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $
   FROM agent_runs r
   WHERE r.organization_id=p_organization_id AND r.id=p_run_id
   LIMIT 1;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION factory_create_run_bundle(
   p_id UUID,
