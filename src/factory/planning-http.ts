@@ -6,7 +6,9 @@ import type { FactoryActor } from "./service";
 export interface FactoryPlanningEnv {
   FACTORY_PLANNER_MODEL: string;
   FACTORY_PLANNER_FALLBACK_MODEL?: string;
-  AI_GATEWAY_API_KEY?: string;\n  FACTORY_DATABASE_REST_URL: string;\n  FACTORY_DATABASE_SERVICE_KEY: string;
+  AI_GATEWAY_API_KEY?: string;
+  FACTORY_DATABASE_REST_URL: string;
+  FACTORY_DATABASE_SERVICE_KEY: string;
 }
 const json = (data: unknown, status = 200): Response => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" },
@@ -31,7 +33,8 @@ export async function handleFactoryPlanningRequest(request: Request, env: Factor
     const planner = new AIGatewayRequirementPlanner({
       primaryModel: env.FACTORY_PLANNER_MODEL,
       fallbackModel: env.FACTORY_PLANNER_FALLBACK_MODEL,
-      gatewayApiKey: env.AI_GATEWAY_API_KEY,\n      usageLedger: new PostgrestAIUsageLedger({ url: env.FACTORY_DATABASE_REST_URL, serviceKey: env.FACTORY_DATABASE_SERVICE_KEY }),
+      gatewayApiKey: env.AI_GATEWAY_API_KEY,
+      usageLedger: new PostgrestAIUsageLedger({ url: env.FACTORY_DATABASE_REST_URL, serviceKey: env.FACTORY_DATABASE_SERVICE_KEY }),
     });
     const plan = await planner.plan(spec, { organizationId: actor.organizationId, userId: actor.userId });
     return json({ plan }, 200);
