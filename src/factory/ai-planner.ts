@@ -1,5 +1,6 @@
 import { generateText } from "ai";
 import { validateTaskGraph, type RequirementSpec, type TaskDefinition } from "./domain";
+import type { AIUsageLedger } from "./ai-usage-ledger";
 
 export interface ModelUsage {
   inputTokens?: number;
@@ -17,6 +18,7 @@ export interface AIPlannerConfig {
   fallbackModel?: string;
   gatewayApiKey?: string;
   timeoutMs?: number;
+  usageLedger: AIUsageLedger;
 }
 export interface RequirementPlanner {
   plan(spec: RequirementSpec): Promise<PlannedTasks>;
@@ -56,7 +58,7 @@ export class AIGatewayRequirementPlanner implements RequirementPlanner {
     if (!config.primaryModel.trim()) throw new Error("PLANNER_MODEL_REQUIRED");
   }
 
-  async plan(spec: RequirementSpec): Promise<PlannedTasks> {
+  async plan(spec: RequirementSpec, identity: { organizationId: string; userId: string }): Promise<PlannedTasks> {
     const prompt = [
       "Design a minimal but complete implementation task DAG for this software requirement.",
       "Return ONLY a JSON object with a tasks array. Each task must have id, title, description, role, dependsOn, and optional estimate.",
