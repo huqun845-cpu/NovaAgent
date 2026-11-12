@@ -2,6 +2,7 @@ import { authenticateBearer, type FactoryAuthConfig } from "./auth";
 import { canPerform } from "./domain";
 import { FactoryService } from "./service";
 import { PostgrestFactoryRepository, type PostgrestConfig } from "./postgrest-repository";
+import { handleFactoryPlanningRequest } from "./planning-http";
 
 export interface FactoryHttpEnv {
   FACTORY_AUTH_SECRET: string;
@@ -9,6 +10,9 @@ export interface FactoryHttpEnv {
   FACTORY_AUTH_AUDIENCE: string;
   FACTORY_DATABASE_REST_URL: string;
   FACTORY_DATABASE_SERVICE_KEY: string;
+  FACTORY_PLANNER_MODEL: string;
+  FACTORY_PLANNER_FALLBACK_MODEL?: string;
+  AI_GATEWAY_API_KEY: string;
 }
 const MAX_BODY_BYTES = 64 * 1024;
 async function readJson(request: Request): Promise<Record<string, unknown>> {
@@ -41,6 +45,10 @@ export async function handleFactoryRequest(request: Request, env: FactoryHttpEnv
     const actor = await authenticateBearer(request, {
       secret: env.FACTORY_AUTH_SECRET, issuer: env.FACTORY_AUTH_ISSUER, audience: env.FACTORY_AUTH_AUDIENCE,
     } satisfies FactoryAuthConfig);
+    if (url.pathname === "/api/factory/plan" && request.method === "POST") {
+      if (!canPerform(actor.role, "run:create")) return json({ error: "FORBIDDEN" }, 403);
+      return handleFactoryPlanningRequest(request, env);
+    }
     const repository = new PostgrestFactoryRepository({
       url: env.FACTORY_DATABASE_REST_URL, serviceKey: env.FACTORY_DATABASE_SERVICE_KEY,
     } satisfies PostgrestConfig);
@@ -63,7 +71,7 @@ export async function handleFactoryRequest(request: Request, env: FactoryHttpEnv
     }
     if (url.pathname === "/api/factory/runs" && request.method === "POST") {
       const idempotencyKey = request.headers.get("idempotency-key") ?? "";
-      const body = await request.json() as Record<string, unknown>;
+      const body = await readJson(request);
       const result = await service.createRun(actor, { projectId: String(body.projectId ?? ""), spec: body.spec, idempotencyKey });
       return json(result, result.reused ? 200 : 201);
     }
