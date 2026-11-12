@@ -1,4 +1,4 @@
-import { TaskDefinition, validateTaskGraph, topologicalOrder } from "./domain";
+import { validateTaskGraph, topologicalOrder, type TaskDefinition } from "./domain";
 
 export interface PlanInput {
   requirement: string;
