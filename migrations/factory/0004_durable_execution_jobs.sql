@@ -65,7 +65,7 @@ BEGIN
      OR length(p_idempotency_key) < 8 OR length(p_idempotency_key) > 160 THEN
     RAISE EXCEPTION 'INVALID_EXECUTION_INPUT';
   END IF;
-  IF jsonb_typeof(v_checks) <> 'array' OR jsonb_array_length(v_checks) < 1
+  IF jsonb_typeof(v_checks) IS DISTINCT FROM 'array' OR jsonb_array_length(v_checks) < 1
      OR jsonb_array_length(v_checks) > 4 THEN
     RAISE EXCEPTION 'INVALID_CHECK_SET';
   END IF;
@@ -123,6 +123,7 @@ BEGIN
     UPDATE factory_execution_budgets
       SET active_count=GREATEST(0,active_count-1),
           reserved_seconds=GREATEST(0,reserved_seconds-v_job.reserved_seconds),
+          monthly_used_seconds=monthly_used_seconds+v_job.reserved_seconds,
           updated_at=now()
       WHERE organization_id=v_job.organization_id;
     UPDATE factory_execution_jobs
@@ -160,17 +161,20 @@ BEGIN
     SELECT j.* FROM factory_execution_jobs j
     JOIN factory_execution_budgets b ON b.organization_id=j.organization_id
     WHERE j.status='queued' AND j.available_at <= now()
-      AND b.period_start=date_trunc('month',now())::date
-      AND b.monthly_used_seconds+b.reserved_seconds+p_reservation_seconds <= b.monthly_limit_seconds
       AND b.active_count < b.max_concurrent
     ORDER BY j.available_at,j.created_at
-    FOR UPDATE OF j SKIP LOCKED
     LIMIT 1
+    FOR UPDATE OF j SKIP LOCKED
   LOOP
     SELECT * INTO v_budget FROM factory_execution_budgets
       WHERE organization_id=v_job.organization_id FOR UPDATE;
-    IF NOT FOUND OR v_budget.period_start <> date_trunc('month',now())::date
-       OR v_budget.monthly_used_seconds+v_budget.reserved_seconds+p_reservation_seconds > v_budget.monthly_limit_seconds
+    IF NOT FOUND THEN CONTINUE; END IF;
+    IF v_budget.period_start < date_trunc('month',now())::date THEN
+      UPDATE factory_execution_budgets SET monthly_used_seconds=0,
+        period_start=date_trunc('month',now())::date,updated_at=now()
+        WHERE organization_id=v_job.organization_id RETURNING * INTO v_budget;
+    END IF;
+    IF v_budget.monthly_used_seconds+v_budget.reserved_seconds+p_reservation_seconds > v_budget.monthly_limit_seconds
        OR v_budget.active_count >= v_budget.max_concurrent THEN
       CONTINUE;
     END IF;
