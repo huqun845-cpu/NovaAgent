@@ -21,7 +21,7 @@ test("runs repository checks in an isolated sandbox and locks egress before scri
   const runner = new VercelSandboxRepositoryRunner(async options => { createOptions = options; return sandbox; });
   const result = await runner.run({ repositoryFullName: "owner/project", commitSha: "a".repeat(40) });
   assert.equal(result.status, "passed");
-  assert.equal(result.checks.filter(x => x.status === "passed").length, 2);
+  assert.equal(result.checks.filter(x => x.name !== "dependency-install" && x.status === "passed").length, 2);
   assert.equal(result.checks.find(x => x.name === "build").status, "skipped");
   assert.deepEqual(createOptions.networkPolicy, { allow: ["github.com", "codeload.github.com", "registry.npmjs.org"] });
   const denyIndex = calls.findIndex(x => x.type === "policy" && x.policy === "deny-all");
