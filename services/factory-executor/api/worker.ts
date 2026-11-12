@@ -49,8 +49,7 @@ export default async function handler(req: RequestLike, res: ResponseLike): Prom
     const result = await runNextExecutionJob(store, new VercelSandboxRepositoryRunner(), workerId);
     return reply(res, 200, result);
   } catch (cause) {
-    const message = cause instanceof Error ? cause.message : "WORKER_FAILED";
     // Do not return database details, tokens, or sandbox internals to the cron caller.
-    return reply(res, 502, { error: "EXECUTOR_WORKER_FAILED", detail: message.slice(0, 160) });
+    return reply(res, 502, { error: "EXECUTOR_WORKER_FAILED" });
   }
 }
