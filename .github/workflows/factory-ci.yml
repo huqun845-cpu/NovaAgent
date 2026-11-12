@@ -1,0 +1,38 @@
+name: Factory control-plane CI
+
+on:
+  push:
+    branches:
+      - feat/ultimate-ai-software-factory-v1
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: factory-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type check
+        run: npm run type-check
+      - name: Unit tests
+        run: npm test
+      - name: Worker dry-run validation
+        run: npx wrangler deploy --dry-run --outdir=.wrangler/dry
