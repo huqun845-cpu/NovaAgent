@@ -8,6 +8,7 @@ This phase adds an isolated HTTP handler and a PostgREST-backed PostgreSQL repos
 - `src/factory/http.ts`: HTTP routes for health, project list/create, run create and run detail.
 - `migrations/factory/0002_control_plane_rpc.sql`: transaction-safe project/run creation RPCs, dependency persistence and audit events.
 - `tests/factory-auth.test.mjs`: signed-token, expiry, signature and role rejection tests.
+- `.github/workflows/factory-ci.yml`: branch/PR validation pipeline for locked install, TypeScript, unit tests and Worker dry-run.
 
 ## HTTP routes
 All routes except the unauthenticated health check require `Authorization: Bearer <JWT>`.
