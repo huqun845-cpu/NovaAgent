@@ -17,6 +17,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  database-migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: factory_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d factory_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply Factory migrations in order
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/factory_test
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE service_role NOLOGIN;"
+          for migration in \
+            migrations/factory/0001_control_plane.sql \
+            migrations/factory/0002_control_plane_rpc.sql \
+            migrations/factory/0003_ai_usage_budgets.sql \
+            migrations/factory/0004_durable_execution_jobs.sql
+          do
+            echo "Applying $migration"
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration"
+          done
+      - name: Verify durable execution, retry, lease recovery and budgets
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/factory_test
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f tests/sql/factory-execution-jobs.sql
+
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 15
