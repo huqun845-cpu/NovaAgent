@@ -37,46 +37,37 @@ export async function runNextExecutionJob(
   const job = await store.claim(workerId);
   if (!job) return { status: "idle" };
   const started = clock();
+  let result: RepositoryCheckResult | null = null;
+  let failure: string | undefined;
   try {
-    const result = await runner.run({
+    result = await runner.run({
       repositoryFullName: job.repositoryFullName,
       commitSha: job.commitSha,
       checks: job.checks,
       timeoutMs: job.timeoutMs,
     });
-    const runtimeSeconds = Math.max(0, Math.ceil((clock() - started) / 1000));
-    const saved = await store.finish({
-      jobId: job.id,
-      workerId,
-      status: result.status === "passed" ? "succeeded" : "failed",
-      result,
-      error: result.status === "failed" ? "One or more repository checks failed" : undefined,
-      runtimeSeconds,
-    }) as { status?: string } | null;
-    return {
-      status: "finished",
-      jobId: job.id,
-      outcome: result.status === "passed" ? "succeeded" : "failed",
-      retrying: saved?.status === "queued",
-    };
+    if (result.status === "failed") failure = "One or more repository checks failed";
   } catch (cause) {
-    const runtimeSeconds = Math.max(0, Math.ceil((clock() - started) / 1000));
-    const message = cause instanceof Error ? cause.message : "EXECUTION_FAILED";
-    const saved = await store.finish({
-      jobId: job.id,
-      workerId,
-      status: "failed",
-      result: null,
-      error: message.slice(0, 4000),
-      runtimeSeconds,
-    }) as { status?: string } | null;
-    return {
-      status: "finished",
-      jobId: job.id,
-      outcome: "failed",
-      retrying: saved?.status === "queued",
-    };
+    failure = (cause instanceof Error ? cause.message : "EXECUTION_FAILED").slice(0, 4000);
   }
+  const runtimeSeconds = Math.max(0, Math.ceil((clock() - started) / 1000));
+  const outcome = result?.status === "passed" ? "succeeded" : "failed";
+  // Persist exactly once. A DB write failure must escape so the lease can
+  // expire and be recovered; it must not be rewritten as a second failure.
+  const saved = await store.finish({
+    jobId: job.id,
+    workerId,
+    status: outcome,
+    result,
+    error: failure,
+    runtimeSeconds,
+  }) as { status?: string } | null;
+  return {
+    status: "finished",
+    jobId: job.id,
+    outcome,
+    retrying: saved?.status === "queued",
+  };
 }
 
 export class PostgrestExecutionJobStore implements ExecutionJobStore {
