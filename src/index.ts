@@ -42,6 +42,7 @@ import { withinDeadline, fetchDeadlineResponse, classifyDeliveryFailure, nativeU
 import { chatCanReceive, noteDeliveryFailure, clearDeliveryFailure, ensureDeliverySchema, deliveryStatus, noteGroupMessage } from "./delivery";
 import { parseFallbackResults } from "./searchFallback";
 import { reserveBroadcast, settleBroadcast, cancelBroadcast } from "./broadcastState";
+import { handleFactoryRequest, type FactoryHttpEnv } from "./factory/http";
 
 // ── Nova engines & helpers ────────────────────────────────────────────────────
 import {
@@ -1184,6 +1185,15 @@ interface Env {
   MEDIA?: R2Bucket;
   APP_BUILDS?: R2Bucket;
   APP_BUILD_RUNNER_TOKEN?: string;
+  // Dedicated cloud software factory control plane (Postgres + AI Gateway).
+  FACTORY_AUTH_SECRET?: string;
+  FACTORY_AUTH_ISSUER?: string;
+  FACTORY_AUTH_AUDIENCE?: string;
+  FACTORY_DATABASE_REST_URL?: string;
+  FACTORY_DATABASE_SERVICE_KEY?: string;
+  FACTORY_PLANNER_MODEL?: string;
+  FACTORY_PLANNER_FALLBACK_MODEL?: string;
+  AI_GATEWAY_API_KEY?: string;
 }
 
 interface BotConfig {
@@ -25965,6 +25975,22 @@ export default {
     API_URL = `https://api.telegram.org/bot${cfg.TOKEN}`;
 
     const url = new URL(request.url);
+    // The Factory API is an isolated Postgres-backed service surface. It is
+    // dispatched before Telegram/D1 initialization so Factory traffic does not
+    // mutate or depend on the existing Telegram product's storage.
+    if (url.pathname.startsWith("/api/factory/")) {
+      const factoryEnv: FactoryHttpEnv = {
+        FACTORY_AUTH_SECRET: env.FACTORY_AUTH_SECRET ?? "",
+        FACTORY_AUTH_ISSUER: env.FACTORY_AUTH_ISSUER ?? "",
+        FACTORY_AUTH_AUDIENCE: env.FACTORY_AUTH_AUDIENCE ?? "",
+        FACTORY_DATABASE_REST_URL: env.FACTORY_DATABASE_REST_URL ?? "",
+        FACTORY_DATABASE_SERVICE_KEY: env.FACTORY_DATABASE_SERVICE_KEY ?? "",
+        FACTORY_PLANNER_MODEL: env.FACTORY_PLANNER_MODEL ?? "",
+        FACTORY_PLANNER_FALLBACK_MODEL: env.FACTORY_PLANNER_FALLBACK_MODEL,
+        AI_GATEWAY_API_KEY: env.AI_GATEWAY_API_KEY ?? "",
+      };
+      return handleFactoryRequest(request, factoryEnv);
+    }
     if (url.pathname === "/factory" || url.pathname === "/factory/") return new Response(FACTORY_DASHBOARD_HTML,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff",
       "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'"}});
     // Schema migration and the legacy user-summary backfill are relevant to
