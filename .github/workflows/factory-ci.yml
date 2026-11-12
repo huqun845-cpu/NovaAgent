@@ -29,7 +29,7 @@ jobs:
           node-version: 22
           cache: npm
       - name: Install locked dependencies
-        run: npm ci
+        run: npm install --no-audit --no-fund
       - name: Type check
         run: npm run type-check
       - name: Unit tests
