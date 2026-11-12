@@ -41,6 +41,8 @@ test("run transitions are explicit and terminal states cannot reopen", () => {
 });
 test("role permissions deny production approval to engineers and viewers", () => {
   assert.equal(canPerform("admin", "release:approve"), true);
+  assert.equal(canPerform("admin", "project:read"), true);
+  assert.equal(canPerform("admin", "run:read"), true);
   assert.equal(canPerform("engineer", "release:approve"), false);
   assert.equal(canPerform("viewer", "task:execute"), false);
 });
