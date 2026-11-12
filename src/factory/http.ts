@@ -34,7 +34,7 @@ const errors: Record<string, number> = {
   INVALID_TOKEN_ROLE: 401, FORBIDDEN: 403, PROJECT_NOT_FOUND: 404, TENANT_SCOPE_DENIED: 404,
   INVALID_SPEC: 400, INVALID_SPEC_TITLE: 400, INVALID_SPEC_DESCRIPTION: 400, INVALID_SPEC_TARGET: 400,
   INVALID_ACCEPTANCE_CRITERIA: 400, INVALID_CONSTRAINTS: 400, INVALID_PROJECT_ID: 400, INVALID_IDEMPOTENCY_KEY: 400,
-  IDEMPOTENCY_KEY_REUSED: 409, INVALID_JSON: 400, INVALID_PROJECT_INPUT: 400, REQUEST_TOO_LARGE: 413,
+  IDEMPOTENCY_KEY_REUSED: 409, INVALID_JSON: 400, INVALID_PROJECT_INPUT: 400, REQUEST_TOO_LARGE: 413,\n  INVALID_EXECUTION_INPUT: 400, INVALID_CHECK_SET: 400, RUN_NOT_FOUND: 404, RUN_NOT_EXECUTABLE: 409,\n  PROJECT_REPOSITORY_NOT_CONFIGURED: 409, EXECUTION_ENQUEUE_FAILED: 500,
 };
 
 export async function handleFactoryRequest(request: Request, env: FactoryHttpEnv): Promise<Response> {
@@ -68,6 +68,36 @@ export async function handleFactoryRequest(request: Request, env: FactoryHttpEnv
         return json({ error: "INVALID_PROJECT_INPUT" }, 400);
       }
       return json({ project: await repository.createProject(actor.organizationId, actor.userId, { name, repositoryFullName: repo as string | null, defaultBranch }) }, 201);
+    }
+    if (url.pathname === "/api/factory/executions" && request.method === "POST") {
+      if (!canPerform(actor.role, "run:create") && !canPerform(actor.role, "task:execute") && !canPerform(actor.role, "qa:execute")) {
+        return json({ error: "FORBIDDEN" }, 403);
+      }
+      const body = await readJson(request);
+      const runId = typeof body.runId === "string" ? body.runId : "";
+      const commitSha = typeof body.commitSha === "string" ? body.commitSha : "";
+      const idempotencyKey = request.headers.get("idempotency-key") ?? "";
+      if (!/^[0-9a-f-]{36}$/i.test(runId) || !/^[a-f0-9]{40}$/i.test(commitSha) ||
+          idempotencyKey.length < 8 || idempotencyKey.length > 160) {
+        return json({ error: "INVALID_EXECUTION_INPUT" }, 400);
+      }
+      const allowed = new Set(["type-check", "test", "build", "lint"]);
+      const checks = body.checks === undefined ? ["type-check", "test", "build"] :
+        Array.isArray(body.checks) ? body.checks : [];
+      if (checks.length < 1 || checks.length > 4 ||
+          checks.some((name: unknown) => typeof name !== "string" || !allowed.has(name)) ||
+          new Set(checks).size !== checks.length) {
+        return json({ error: "INVALID_CHECK_SET" }, 400);
+      }
+      const job = await repository.enqueueExecutionJob({
+        organizationId: actor.organizationId,
+        runId,
+        actorId: actor.userId,
+        commitSha: commitSha.toLowerCase(),
+        idempotencyKey,
+        checks: checks as ("type-check" | "test" | "build" | "lint")[],
+      });
+      return json({ job }, job.attempts > 0 || job.status !== "queued" ? 200 : 202);
     }
     if (url.pathname === "/api/factory/runs" && request.method === "POST") {
       const idempotencyKey = request.headers.get("idempotency-key") ?? "";
