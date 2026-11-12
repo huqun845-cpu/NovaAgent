@@ -147,7 +147,7 @@ export function assertRunTransition(from: RunStatus, to: RunStatus): void {
 export function canPerform(role: FactoryRole, action: string): boolean {
   const permissions: Record<FactoryRole, string[]> = {
     owner: ["*"],
-    admin: ["org:manage", "member:manage", "project:manage", "run:create", "run:cancel", "release:approve", "audit:read"],
+    admin: ["org:manage", "member:manage", "project:read", "project:manage", "run:read", "run:create", "run:cancel", "task:read", "release:approve", "audit:read"],
     architect: ["project:read", "project:manage", "run:create", "run:read", "task:read"],
     engineer: ["project:read", "run:read", "task:read", "task:execute"],
     qa: ["project:read", "run:read", "task:read", "qa:execute"],
