@@ -17,9 +17,13 @@ function decodeBase64Url(value: string): Uint8Array {
   return Uint8Array.from(raw, char => char.charCodeAt(0));
 }
 function parsePart(value: string): Record<string, unknown> {
-  const parsed: unknown = JSON.parse(new TextDecoder().decode(decodeBase64Url(value)));
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_TOKEN");
-  return parsed as Record<string, unknown>;
+  try {
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(decodeBase64Url(value)));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_TOKEN");
+    return parsed as Record<string, unknown>;
+  } catch {
+    throw new Error("INVALID_TOKEN");
+  }
 }
 
 /** Verifies HS256 tokens with WebCrypto; never trusts unsigned identity headers. */
@@ -33,8 +37,14 @@ export async function authenticateBearer(request: Request, config: FactoryAuthCo
   const protectedHeader = parsePart(parts[0]);
   const claims = parsePart(parts[1]) as JwtClaims;
   if (protectedHeader.alg !== "HS256" || protectedHeader.typ !== "JWT") throw new Error("INVALID_TOKEN_ALGORITHM");
+  let signature: Uint8Array;
+  try {
+    signature = decodeBase64Url(parts[2]);
+  } catch {
+    throw new Error("INVALID_TOKEN");
+  }
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(config.secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
-  const valid = await crypto.subtle.verify("HMAC", key, decodeBase64Url(parts[2]), new TextEncoder().encode(parts[0] + "." + parts[1]));
+  const valid = await crypto.subtle.verify("HMAC", key, signature, new TextEncoder().encode(parts[0] + "." + parts[1]));
   if (!valid) throw new Error("INVALID_TOKEN_SIGNATURE");
   if (claims.iss !== config.issuer || claims.aud !== config.audience) throw new Error("INVALID_TOKEN_CLAIMS");
   if (typeof claims.exp !== "number" || claims.exp <= nowSeconds) throw new Error("TOKEN_EXPIRED");
