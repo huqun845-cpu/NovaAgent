@@ -24,7 +24,7 @@ export interface RequirementPlanner {
 const MAX_TASKS = 40;
 const ALLOWED_ROLES = new Set(["architect", "frontend", "backend", "integration", "qa", "security", "reviewer", "release"]);
 
-function parsePlan(text: string): TaskDefinition[] {
+export function parseTaskPlan(text: string): TaskDefinition[] {
   const cleaned = text.trim().replace(/^\u0060{3}(?:json)?\s*/i, "").replace(/\s*\u0060{3}$/i, "");
   const parsed: unknown = JSON.parse(cleaned);
   const tasks = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" ? (parsed as { tasks?: unknown }).tasks : undefined);
@@ -83,7 +83,7 @@ export class AIGatewayRequirementPlanner implements RequirementPlanner {
           abortSignal: AbortSignal.timeout(this.config.timeoutMs ?? 45_000),
           ...(this.config.gatewayApiKey ? { headers: { "Authorization": "Bearer " + this.config.gatewayApiKey } } : {}),
         });
-        const tasks = parsePlan(result.text);
+        const tasks = parseTaskPlan(result.text);
         return {
           tasks,
           model,
