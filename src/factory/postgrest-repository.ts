@@ -83,9 +83,10 @@ export class PostgrestFactoryRepository implements FactoryRepository {
     return this.run(row as DbRun);
   }
   async getRun(organizationId: string, runId: string): Promise<FactoryRunRecord | null> {
-    const query = new URLSearchParams({ select: "id,organization_id,project_id,created_by,idempotency_key,status,created_at,spec,tasks:workflow_tasks(task_key,title,description,role,status,attempt)", id: "eq." + runId, organization_id: "eq." + organizationId, limit: "1" });
-    const rows = await this.request<DbRun[]>("/rest/v1/agent_runs?" + query.toString());
-    return rows[0] ? this.run(rows[0]) : null;
+    const row = await this.request<DbRun | null>("/rest/v1/rpc/factory_get_run", {
+      method: "POST", body: JSON.stringify({ p_organization_id: organizationId, p_run_id: runId }),
+    });
+    return row ? this.run(row) : null;
   }
   private project(row: DbProject): FactoryProjectRecord {
     return { id: row.id, organizationId: row.organization_id, name: row.name, repositoryFullName: row.repository_full_name, defaultBranch: row.default_branch };
