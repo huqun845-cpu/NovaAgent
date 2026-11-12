@@ -76,6 +76,15 @@ LOADING_GIF_URL = ""
 #
 #   GEMINI_KEY_1 .. GEMINI_KEY_5          Google Gemini API key pool
 #
+#   AI_GATEWAY_API_KEY                    Vercel AI Gateway request authentication
+#   FACTORY_PLANNER_MODEL                 Exact provider/model ID from AI Gateway catalog
+#   FACTORY_PLANNER_FALLBACK_MODEL        Optional second model ID for bounded fallback
+#
+#   FACTORY_AUTH_SECRET                   Factory API HS256 signing secret (32+ chars)
+#   FACTORY_AUTH_ISSUER / AUDIENCE         Factory JWT validation settings
+#   FACTORY_DATABASE_REST_URL              Dedicated Factory PostgREST endpoint
+#   FACTORY_DATABASE_SERVICE_KEY           Privileged Factory DB key; never expose to clients
+#
 #   GOOGLE_SEARCH_API_KEY                 Google Programmable Search key
 #   GOOGLE_SEARCH_ENGINE_ID               Google Programmable Search engine id
 #
