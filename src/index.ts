@@ -25943,6 +25943,22 @@ let _lastUsersSyncTs = 0;
 // SECTION: WORKER EXPORT
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    // Factory is a separate cloud product surface backed only by PostgreSQL.
+    // Route it before Telegram credentials, D1 schema setup, or bot config.
+    if (url.pathname.startsWith("/api/factory/")) {
+      const factoryEnv: FactoryHttpEnv = {
+        FACTORY_AUTH_SECRET: env.FACTORY_AUTH_SECRET ?? "",
+        FACTORY_AUTH_ISSUER: env.FACTORY_AUTH_ISSUER ?? "",
+        FACTORY_AUTH_AUDIENCE: env.FACTORY_AUTH_AUDIENCE ?? "",
+        FACTORY_DATABASE_REST_URL: env.FACTORY_DATABASE_REST_URL ?? "",
+        FACTORY_DATABASE_SERVICE_KEY: env.FACTORY_DATABASE_SERVICE_KEY ?? "",
+        FACTORY_PLANNER_MODEL: env.FACTORY_PLANNER_MODEL ?? "",
+        FACTORY_PLANNER_FALLBACK_MODEL: env.FACTORY_PLANNER_FALLBACK_MODEL,
+        AI_GATEWAY_API_KEY: env.AI_GATEWAY_API_KEY ?? "",
+      };
+      return handleFactoryRequest(request, factoryEnv);
+    }
     if (!env.TOKEN || !env.DB) {
       return new Response("Service temporarily unavailable", { status: 503 });
     }
@@ -25975,22 +25991,6 @@ export default {
     API_URL = `https://api.telegram.org/bot${cfg.TOKEN}`;
 
     const url = new URL(request.url);
-    // The Factory API is an isolated Postgres-backed service surface. It is
-    // dispatched before Telegram/D1 initialization so Factory traffic does not
-    // mutate or depend on the existing Telegram product's storage.
-    if (url.pathname.startsWith("/api/factory/")) {
-      const factoryEnv: FactoryHttpEnv = {
-        FACTORY_AUTH_SECRET: env.FACTORY_AUTH_SECRET ?? "",
-        FACTORY_AUTH_ISSUER: env.FACTORY_AUTH_ISSUER ?? "",
-        FACTORY_AUTH_AUDIENCE: env.FACTORY_AUTH_AUDIENCE ?? "",
-        FACTORY_DATABASE_REST_URL: env.FACTORY_DATABASE_REST_URL ?? "",
-        FACTORY_DATABASE_SERVICE_KEY: env.FACTORY_DATABASE_SERVICE_KEY ?? "",
-        FACTORY_PLANNER_MODEL: env.FACTORY_PLANNER_MODEL ?? "",
-        FACTORY_PLANNER_FALLBACK_MODEL: env.FACTORY_PLANNER_FALLBACK_MODEL,
-        AI_GATEWAY_API_KEY: env.AI_GATEWAY_API_KEY ?? "",
-      };
-      return handleFactoryRequest(request, factoryEnv);
-    }
     if (url.pathname === "/factory" || url.pathname === "/factory/") return new Response(FACTORY_DASHBOARD_HTML,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff",
       "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'"}});
     // Schema migration and the legacy user-summary backfill are relevant to
