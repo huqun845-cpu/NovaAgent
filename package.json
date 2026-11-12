@@ -8,7 +8,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
-    "test": "node --experimental-transform-types --experimental-loader ./tests/ts-resolve.mjs --test tests/schedule.test.mjs tests/agentPlan.test.mjs tests/agentRuntime.test.mjs tests/artifact.test.mjs tests/codegen.test.mjs tests/boundaries.test.mjs tests/inline.test.mjs tests/deployment.test.mjs tests/engines.test.mjs tests/core.test.mjs tests/memory.test.mjs tests/factory.test.mjs tests/factory-service.test.mjs tests/factory-auth.test.mjs tests/factory-ai-planner.test.mjs tests/factory-ai-usage-ledger.test.mjs tests/factory-execution-jobs.test.mjs",
+    "test": "node --experimental-transform-types --experimental-loader ./tests/ts-resolve.mjs --test tests/schedule.test.mjs tests/agentPlan.test.mjs tests/agentRuntime.test.mjs tests/artifact.test.mjs tests/codegen.test.mjs tests/boundaries.test.mjs tests/inline.test.mjs tests/deployment.test.mjs tests/engines.test.mjs tests/core.test.mjs tests/memory.test.mjs tests/factory.test.mjs tests/factory-service.test.mjs tests/factory-auth.test.mjs tests/factory-ai-planner.test.mjs tests/factory-ai-usage-ledger.test.mjs tests/factory-execution-jobs.test.mjs tests/factory-worker-routing.test.mjs",
     "type-check": "tsc --noEmit",
     "validate": "npm run type-check && npm test && wrangler deploy --dry-run --outdir=.wrangler/dry",
     "cf-types": "wrangler types"
