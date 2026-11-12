@@ -92,7 +92,8 @@ export class VercelSandboxRepositoryRunner {
         });
         if (result.exitCode !== 0) break;
       }
-      const failed = checks.some(check => check.status === "failed") || !checks.some(check => check.status === "passed");
+      const requestedResults = checks.filter(check => check.name !== "dependency-install");
+      const failed = requestedResults.some(check => check.status === "failed") || !requestedResults.some(check => check.status === "passed");
       return {
         sandboxId, repositoryFullName: input.repositoryFullName, commitSha: input.commitSha,
         status: failed ? "failed" : "passed", checks, startedAt, finishedAt: new Date().toISOString(),
