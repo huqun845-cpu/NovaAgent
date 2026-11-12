@@ -802,17 +802,20 @@ test("web builder: extraction and salvage handle model wrapper noise", () => {
   assert.ok(normalizeWebAppOutput(noClose), "salvage must close an unterminated document");
 });
 
-test("web builder: quality assessment is wired into the generation pipeline", () => {
-  // validateWebApp / assessVisualQuality were dead code; ensure the heavy-gen
-  // pipeline actually consults them (advisory: logged, never fatal).
+test("codegen quality assessment is integrated into the generation and repair pipeline", () => {
+  // The former webBuilder module was retired in favor of the unified codegen
+  // engine. Verify the current path scores the artifact and feeds weak output
+  // into the bounded repair loop instead of testing deleted APIs.
   const src = readFileSync(join(ROOT, "src/index.ts"), "utf8");
   assert.match(src, /assessQuality\?:/, "HeavyGenSpec must declare an assessQuality hook");
-  assert.match(src, /assessQuality: \(code: string\) => validateWebApp\(code\)/, "web-app spec must supply it");
-  assert.match(src, /spec\.assessQuality\(normalized\)/, "pipeline must call it");
-  // It must NOT reject output: a low score only warns.
-  const call = src.slice(src.indexOf("if (spec.assessQuality)"), src.indexOf("return normalized;", src.indexOf("if (spec.assessQuality)")));
-  assert.match(call, /logger\.warn/, "low quality must be logged");
-  assert.doesNotMatch(call, /continue;/, "quality must never reject a usable generation");
+  assert.match(src, /assessQuality: \(code: string\) => assessArtifactQuality\(code, direction\)/,
+    "codegen spec must supply the direction-aware quality assessment");
+  assert.match(src, /const report = spec\.assessQuality\?\.\(normalized\)/,
+    "pipeline must call the optional quality hook");
+  assert.match(src, /quality: report/, "deliverable scoring must consume the assessment");
+  assert.match(src, /delivery\.verdict !== "shippable"/,
+    "weak output must enter the quality-gated repair path");
+  assert.match(src, /repairAttempted/, "quality repair must be bounded to a single repair attempt");
 });
 
 test("web builder: validateWebApp reports structure and visuals together", () => {
