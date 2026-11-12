@@ -1,5 +1,11 @@
 # V2 Implementation Roadmap and Acceptance Gates
 
+## Delivery status (2026-11-13)
+- [x] Phase 1A: isolated domain contracts, requirement validation, deterministic task DAG validation/planning, starter RBAC matrix, tenant-scope guard, run-state transition guard, PostgreSQL schema draft, and unit tests committed on `feat/ultimate-ai-software-factory-v1`.
+- [ ] Phase 1B: authenticated API, identity provider integration, PostgreSQL repository, dashboard shell, audit write path, and integration tests.
+- [ ] Phases 2–7: not started. No model execution, coding sandbox, durable worker, CI execution, preview deployment, or production release is claimed as implemented.
+
+
 ## Phase 0 — Baseline and non-regression
 - Record current NovaAgent commit and deployment configuration.
 - Run existing type-check, unit tests, and dry-run deploy.
