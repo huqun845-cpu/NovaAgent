@@ -91,3 +91,29 @@ test("runner exceptions are persisted for bounded retry", async () => {
   assert.equal(finished[0].error, "sandbox unavailable");
   assert.equal(result.retrying, false);
 });
+
+test("PostgREST store uses atomic claim and finish RPC contracts", async () => {
+  const calls = [];
+  const responses = [
+    new Response(JSON.stringify(job), { status: 200 }),
+    new Response(JSON.stringify({ id: "job-1", status: "succeeded" }), { status: 200 }),
+  ];
+  const store = new (await import("../src/job-store.ts")).PostgrestExecutionJobStore(
+    { url: "https://db.example", serviceKey: "server-secret" },
+    async (url, init) => {
+      calls.push({ url, init });
+      return responses.shift();
+    },
+  );
+  const claimed = await store.claim("worker-1");
+  assert.equal(claimed.id, "job-1");
+  await store.finish({
+    jobId: "job-1", workerId: "worker-1", status: "succeeded",
+    result: null, runtimeSeconds: 7,
+  });
+  assert.match(calls[0].url, /rpc\/factory_claim_execution_job$/);
+  assert.equal(JSON.parse(calls[0].init.body).p_reservation_seconds, 240);
+  assert.match(calls[1].url, /rpc\/factory_finish_execution_job$/);
+  assert.equal(JSON.parse(calls[1].init.body).p_runtime_seconds, 7);
+  assert.equal(calls[0].init.headers.authorization, "Bearer server-secret");
+});
