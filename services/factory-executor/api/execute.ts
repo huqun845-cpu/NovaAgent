@@ -33,9 +33,10 @@ export default async function handler(req: RequestLike, res: ResponseLike): Prom
       if (typeof value === "string") headers.set(key, value);
       else if (Array.isArray(value)) headers.set(key, value.join(", "));
     }
+    const requestBody = typeof req.body === "string" ? req.body : JSON.stringify(req.body ?? {});
+    if (new TextEncoder().encode(requestBody).byteLength > 4096) return error(res, 413, "REQUEST_TOO_LARGE");
     const request = new Request("https://factory-executor.invalid" + (req.url ?? "/api/execute"), {
-      method: "POST", headers,
-      body: typeof req.body === "string" ? req.body : JSON.stringify(req.body ?? {}),
+      method: "POST", headers, body: requestBody,
     });
     const actor = await authenticateBearer(request, {
       secret: env.FACTORY_AUTH_SECRET, issuer: env.FACTORY_AUTH_ISSUER, audience: env.FACTORY_AUTH_AUDIENCE,
