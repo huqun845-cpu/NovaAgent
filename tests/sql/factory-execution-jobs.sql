@@ -42,7 +42,7 @@ BEGIN
 
   -- Per-organization max_concurrent=1 is enforced atomically.
   v_claim := factory_claim_execution_job('ci-worker-1',300,240);
-  IF v_claim->>'id' <> v_job_id::text THEN RAISE EXCEPTION 'worker did not claim expected job'; END IF;
+  IF v_claim IS NULL OR v_claim->>'id' <> v_job_id::text THEN RAISE EXCEPTION 'worker did not claim expected job'; END IF;
   IF factory_claim_execution_job('ci-worker-2',300,240) IS NOT NULL THEN
     RAISE EXCEPTION 'concurrency limit was bypassed';
   END IF;
@@ -58,7 +58,7 @@ BEGIN
   v_job_id := (v_job->>'id')::uuid;
   FOR v_attempt IN 1..3 LOOP
     v_claim := factory_claim_execution_job('ci-retry-worker-'||v_attempt,300,240);
-    IF (v_claim->>'id')::uuid <> v_job_id THEN RAISE EXCEPTION 'retry attempt % was not claimed',v_attempt; END IF;
+    IF v_claim IS NULL OR (v_claim->>'id')::uuid <> v_job_id THEN RAISE EXCEPTION 'retry attempt % was not claimed',v_attempt; END IF;
     v_finish := factory_finish_execution_job(v_job_id,'ci-retry-worker-'||v_attempt,'failed','{"status":"failed"}'::jsonb,'expected test failure',1);
     IF v_attempt < 3 THEN
       IF v_finish->>'status' <> 'queued' THEN RAISE EXCEPTION 'attempt % should be queued for retry',v_attempt; END IF;
@@ -75,7 +75,7 @@ BEGIN
   IF (v_claim->>'id')::uuid <> v_job_id THEN RAISE EXCEPTION 'lease test job was not claimed'; END IF;
   UPDATE factory_execution_jobs SET lease_expires_at=now()-interval '1 second' WHERE id=v_job_id;
   v_claim := factory_claim_execution_job('ci-recovery-worker',300,240);
-  IF (v_claim->>'id')::uuid <> v_job_id OR (v_claim->>'attempt')::integer <> 2 THEN
+  IF v_claim IS NULL OR (v_claim->>'id')::uuid <> v_job_id OR (v_claim->>'attempt')::integer <> 2 THEN
     RAISE EXCEPTION 'expired lease was not reaped and reclaimed';
   END IF;
   PERFORM factory_finish_execution_job(v_job_id,'ci-recovery-worker','succeeded','{"status":"passed"}'::jsonb,NULL,2);
