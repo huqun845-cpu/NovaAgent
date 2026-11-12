@@ -73,6 +73,8 @@ Body:
 
 `checks` 可选，默认 `type-check/test/build`。只允许 `type-check`、`test`、`build`、`lint`。仓库地址从租户内项目记录读取，调用方不能提交任意 URL 或 shell 命令。
 
+通过 `GET /api/factory/executions/{jobId}` 可查询任务状态、尝试次数、完成时间和检查日志；查询会按 JWT 中的 organization ID 限定租户。
+
 ## Legacy synchronous endpoint
 
 `POST /api/execute` 仍保留给旧版诊断调用，使用 Factory JWT 并同步等待 Sandbox。新产品流程应使用上述 durable enqueue API，不应把同步端点作为长任务调度方案。
