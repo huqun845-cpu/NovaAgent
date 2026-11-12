@@ -74,6 +74,9 @@ BEGIN
   v_claim := factory_claim_execution_job('ci-crashed-worker',300,240);
   IF (v_claim->>'id')::uuid <> v_job_id THEN RAISE EXCEPTION 'lease test job was not claimed'; END IF;
   UPDATE factory_execution_jobs SET lease_expires_at=now()-interval '1 second' WHERE id=v_job_id;
+  IF factory_reap_expired_execution_jobs() <> 1 THEN RAISE EXCEPTION 'expired lease was not reaped'; END IF;
+  -- The reaper applies a backoff; make the job due to test its next claim.
+  UPDATE factory_execution_jobs SET available_at=now()-interval '1 second' WHERE id=v_job_id;
   v_claim := factory_claim_execution_job('ci-recovery-worker',300,240);
   IF v_claim IS NULL OR (v_claim->>'id')::uuid <> v_job_id OR (v_claim->>'attempt')::integer <> 2 THEN
     RAISE EXCEPTION 'expired lease was not reaped and reclaimed';
