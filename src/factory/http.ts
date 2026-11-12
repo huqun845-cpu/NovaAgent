@@ -47,7 +47,7 @@ export async function handleFactoryRequest(request: Request, env: FactoryHttpEnv
     } satisfies FactoryAuthConfig);
     if (url.pathname === "/api/factory/plan" && request.method === "POST") {
       if (!canPerform(actor.role, "run:create")) return json({ error: "FORBIDDEN" }, 403);
-      return handleFactoryPlanningRequest(request, env);
+      return handleFactoryPlanningRequest(request, env, actor);
     }
     const repository = new PostgrestFactoryRepository({
       url: env.FACTORY_DATABASE_REST_URL, serviceKey: env.FACTORY_DATABASE_SERVICE_KEY,
