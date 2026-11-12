@@ -34,5 +34,11 @@ jobs:
         run: npm run type-check
       - name: Unit tests
         run: npm test
+      - name: Install cloud executor dependencies
+        run: npm --prefix services/factory-executor install --no-audit --no-fund
+      - name: Cloud executor type check
+        run: npm --prefix services/factory-executor run type-check
+      - name: Cloud executor unit tests
+        run: npm --prefix services/factory-executor test
       - name: Worker dry-run validation
         run: npx wrangler deploy --dry-run --outdir=.wrangler/dry
