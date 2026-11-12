@@ -7,7 +7,9 @@
 - [x] Phase 2A: AI SDK 7 + AI Gateway requirement planner, authenticated plan endpoint, bounded fallback, untrusted-output DAG validation, and tests committed. Live Gateway call and CI pass not yet verified.
 - [x] Phase 2B foundation: Postgres monthly input/output token budgets, atomic reservation/settlement RPCs, per-user invocation ledger, fail-closed budget checks, and adapter tests committed. Currency billing, real Gateway reconciliation, quotas UI, and evaluation suite remain open.
 - [ ] Phase 2C: structured model evaluation, persisted plan versions/approval, provider-level price reconciliation, second-model independent review, and first Coding Harness adapter.
-- [ ] Phases 3–7: not yet implemented. No cloud coding sandbox, durable worker, CI execution, preview deployment, or production release is claimed.
+- [x] Phase 3A code foundation: separate Node.js Vercel Sandbox repository-check service, authenticated run/project resolution, immutable commit SHA, install-only egress allowlist then deny-all before scripts, fixed npm check allowlist, mocked tests, and separate deployment docs committed. Not deployed or live-tested; Worker dispatch and durable jobs remain open.
+- [ ] Phase 3B: private-repository credential brokering, patch-capable coding harness, branch/PR workflow, durable job dispatch, executor concurrency and spend quotas.
+- [ ] Phases 4–7: durable parallel orchestration, repair/review gates, preview/production release and mobile delivery not yet implemented.
 
 
 ## Phase 0 — Baseline and non-regression
