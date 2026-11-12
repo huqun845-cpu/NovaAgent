@@ -84,6 +84,8 @@ LOADING_GIF_URL = ""
 #   FACTORY_AUTH_ISSUER / AUDIENCE         Factory JWT validation settings
 #   FACTORY_DATABASE_REST_URL              Dedicated Factory PostgREST endpoint
 #   FACTORY_DATABASE_SERVICE_KEY           Privileged Factory DB key; never expose to clients
+#   FACTORY_PLANNER_MODEL                  AI Gateway model ID for requirement planning
+#   FACTORY_PLANNER_FALLBACK_MODEL         Optional fallback model ID
 #
 #   GOOGLE_SEARCH_API_KEY                 Google Programmable Search key
 #   GOOGLE_SEARCH_ENGINE_ID               Google Programmable Search engine id
