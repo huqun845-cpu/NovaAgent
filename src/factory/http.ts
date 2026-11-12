@@ -101,6 +101,12 @@ export async function handleFactoryRequest(request: Request, env: FactoryHttpEnv
       });
       return json({ job }, job.attempts > 0 || job.status !== "queued" ? 200 : 202);
     }
+    const executionMatch = /^\/api\/factory\/executions\/([0-9a-f-]{36})$/i.exec(url.pathname);
+    if (executionMatch && request.method === "GET") {
+      if (!canPerform(actor.role, "run:read")) return json({ error: "FORBIDDEN" }, 403);
+      const job = await repository.getExecutionJob(actor.organizationId, executionMatch[1]);
+      return job ? json({ job }) : json({ error: "NOT_FOUND" }, 404);
+    }
     if (url.pathname === "/api/factory/runs" && request.method === "POST") {
       const idempotencyKey = request.headers.get("idempotency-key") ?? "";
       const body = await readJson(request);
