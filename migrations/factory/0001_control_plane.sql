@@ -113,7 +113,7 @@ CREATE TABLE workflow_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (run_id, event_key),
   FOREIGN KEY (organization_id, run_id) REFERENCES agent_runs(organization_id, id) ON DELETE CASCADE,
-  FOREIGN KEY (organization_id, run_id, task_id) REFERENCES workflow_tasks(organization_id, run_id, id) ON DELETE SET NULL (task_id)
+  FOREIGN KEY (organization_id, run_id, task_id) REFERENCES workflow_tasks(organization_id, run_id, id) ON DELETE CASCADE
 );
 CREATE INDEX workflow_events_run_created ON workflow_events(run_id, created_at);
 
