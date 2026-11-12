@@ -62,3 +62,23 @@ The unit tests are committed but have not yet been run in a live CI job. No live
 3. Add structured planning evaluation fixtures and model regression tests.
 4. Add planner approval and persisted plan versioning.
 5. Add coding-harness adapters behind a strict capability interface; do not give this planner execution tools.
+
+## Phase 2B — Monthly token budget gate
+
+The planner now requires an organization budget reservation before each model attempt:
+- `migrations/factory/0003_ai_usage_budgets.sql` adds monthly input/output token budgets and an invocation ledger.
+- `src/factory/ai-usage-ledger.ts` calls atomic Postgres RPC functions using the server-only service credential.
+- Every attempt reserves estimated prompt tokens and the full 6,000-token output ceiling before calling the provider.
+- On success, reported token usage settles the reservation. On failure after the provider call begins, the planner conservatively settles the full reservation instead of assuming the failed request was free.
+- Missing budgets fail closed; exhausted budgets return HTTP 429. Budget rows are provisioned explicitly by an operator.
+
+Provision one budget row per organization (example only; tune limits for the plan):
+```sql
+INSERT INTO factory_ai_budgets (
+  organization_id, monthly_input_token_limit, monthly_output_token_limit
+) VALUES (
+  '<organization-uuid>', 5000000, 1000000
+);
+```
+
+This is token quota accounting, not monetary billing. Exact currency cost still requires trusted per-provider pricing metadata and reconciliation against AI Gateway usage logs. No cost amount is fabricated by this implementation.
