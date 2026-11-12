@@ -65,7 +65,8 @@ CREATE TABLE agent_runs (
   FOREIGN KEY (organization_id, project_id) REFERENCES factory_projects(organization_id, id) ON DELETE CASCADE,
   FOREIGN KEY (organization_id, project_id, spec_id) REFERENCES requirement_specs(organization_id, project_id, id),
   UNIQUE (organization_id, id),
-  UNIQUE (organization_id, idempotency_key)
+  UNIQUE (organization_id, idempotency_key),
+  UNIQUE (organization_id, project_id, id)
 );
 CREATE INDEX agent_runs_project_created ON agent_runs(project_id, created_at DESC);
 
@@ -76,7 +77,7 @@ CREATE TABLE workflow_tasks (
   task_key VARCHAR(80) NOT NULL,
   title VARCHAR(160) NOT NULL,
   description TEXT NOT NULL,
-  role VARCHAR(24) NOT NULL,
+  role VARCHAR(24) NOT NULL CHECK (role IN ('architect','frontend','backend','integration','qa','security','reviewer','release')),
   status VARCHAR(16) NOT NULL CHECK (status IN ('blocked','ready','running','succeeded','failed','cancelled')),
   attempt INTEGER NOT NULL DEFAULT 0 CHECK (attempt >= 0),
   payload JSONB NOT NULL DEFAULT '{}'::jsonb,
@@ -105,13 +106,14 @@ CREATE TABLE workflow_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   run_id UUID NOT NULL,
-  task_id UUID REFERENCES workflow_tasks(id) ON DELETE SET NULL,
+  task_id UUID,
   event_type VARCHAR(80) NOT NULL,
   event_key VARCHAR(160) NOT NULL,
   payload JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (run_id, event_key),
-  FOREIGN KEY (organization_id, run_id) REFERENCES agent_runs(organization_id, id) ON DELETE CASCADE
+  FOREIGN KEY (organization_id, run_id) REFERENCES agent_runs(organization_id, id) ON DELETE CASCADE,
+  FOREIGN KEY (organization_id, run_id, task_id) REFERENCES workflow_tasks(organization_id, run_id, id) ON DELETE SET NULL (task_id)
 );
 CREATE INDEX workflow_events_run_created ON workflow_events(run_id, created_at);
 
@@ -142,7 +144,7 @@ CREATE TABLE release_approvals (
   decided_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   FOREIGN KEY (organization_id, project_id) REFERENCES factory_projects(organization_id, id) ON DELETE CASCADE,
-  FOREIGN KEY (organization_id, run_id) REFERENCES agent_runs(organization_id, id) ON DELETE CASCADE,
+  FOREIGN KEY (organization_id, project_id, run_id) REFERENCES agent_runs(organization_id, project_id, id) ON DELETE CASCADE,
   CHECK (environment <> 'production' OR decision <> 'approved' OR decided_by IS NOT NULL)
 );
 CREATE INDEX release_approvals_pending ON release_approvals(organization_id, expires_at) WHERE decision = 'pending';
