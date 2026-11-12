@@ -11,6 +11,7 @@ const json = (data: unknown, status = 200): Response => new Response(JSON.string
 });
 export async function handleFactoryPlanningRequest(request: Request, env: FactoryPlanningEnv): Promise<Response> {
   if (request.method !== "POST") return json({ error: "METHOD_NOT_ALLOWED" }, 405);
+  if (!env.FACTORY_PLANNER_MODEL?.trim() || !env.AI_GATEWAY_API_KEY?.trim()) return json({ error: "AI_PLANNER_NOT_CONFIGURED" }, 503);
   const declared = Number(request.headers.get("content-length") ?? "0");
   if (declared > 64 * 1024) return json({ error: "REQUEST_TOO_LARGE" }, 413);
   let body: Record<string, unknown>;
