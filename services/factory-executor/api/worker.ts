@@ -33,12 +33,12 @@ function reply(res: ResponseLike, status: number, body: unknown): void {
 export default async function handler(req: RequestLike, res: ResponseLike): Promise<void> {
   if (req.method !== "GET" && req.method !== "POST") return reply(res, 405, { error: "METHOD_NOT_ALLOWED" });
   const env = process.env as WorkerEnv;
-  if (!env.FACTORY_DATABASE_REST_URL || !env.FACTORY_DATABASE_SERVICE_KEY || !env.FACTORY_EXECUTOR_CRON_SECRET) {
+  if (!env.FACTORY_DATABASE_REST_URL || !env.FACTORY_DATABASE_SERVICE_KEY || !env.CRON_SECRET) {
     return reply(res, 503, { error: "EXECUTOR_WORKER_NOT_CONFIGURED" });
   }
   const authorization = header(req, "authorization");
   const supplied = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
-  if (!safeSecretEqual(env.FACTORY_EXECUTOR_CRON_SECRET, supplied)) return reply(res, 401, { error: "UNAUTHENTICATED" });
+  if (!safeSecretEqual(env.CRON_SECRET, supplied)) return reply(res, 401, { error: "UNAUTHENTICATED" });
 
   const workerId = "vercel:" + (process.env.VERCEL_REGION ?? "region-unknown") + ":" + randomUUID();
   try {
