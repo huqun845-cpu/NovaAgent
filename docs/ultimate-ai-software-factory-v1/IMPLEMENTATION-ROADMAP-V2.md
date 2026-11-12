@@ -2,7 +2,8 @@
 
 ## Delivery status (2026-11-13)
 - [x] Phase 1A: isolated domain contracts, requirement validation, deterministic task DAG validation/planning, starter RBAC matrix, tenant-scope guard, run-state transition guard, PostgreSQL schema draft, run-creation application service, idempotency handling, and unit tests committed on `feat/ultimate-ai-software-factory-v1`.
-- [ ] Phase 1B: authenticated API, identity provider integration, PostgreSQL repository, dashboard shell, audit write path, and integration tests.
+- [x] Phase 1B foundation: isolated HTTP handler, HS256 JWT verification adapter, PostgREST repository, project/run endpoints, transactional RPC migration, and authentication unit tests committed. Not yet mounted in the Worker or verified against a live PostgreSQL instance.
+- [ ] Phase 1B completion: OIDC provider + membership lookup, Worker route integration, real database integration tests, audit query/pagination/rate limits, dashboard shell.
 - [ ] Phases 2–7: not started. No model execution, coding sandbox, durable worker, CI execution, preview deployment, or production release is claimed as implemented.
 
 
