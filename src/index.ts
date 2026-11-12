@@ -25990,7 +25990,7 @@ export default {
     env_ref = env;
     API_URL = `https://api.telegram.org/bot${cfg.TOKEN}`;
 
-    const url = new URL(request.url);
+    
     if (url.pathname === "/factory" || url.pathname === "/factory/") return new Response(FACTORY_DASHBOARD_HTML,{headers:{"Content-Type":"text/html; charset=utf-8","Cache-Control":"no-store","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff",
       "Content-Security-Policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'"}});
     // Schema migration and the legacy user-summary backfill are relevant to
