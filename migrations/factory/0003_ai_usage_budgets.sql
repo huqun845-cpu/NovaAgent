@@ -78,9 +78,13 @@ CREATE OR REPLACE FUNCTION factory_settle_ai_invocation(
   p_id UUID, p_organization_id UUID, p_input_tokens BIGINT, p_output_tokens BIGINT
 ) RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v factory_ai_invocations%ROWTYPE;
+DECLARE
+  v factory_ai_invocations%ROWTYPE;
+  b factory_ai_budgets%ROWTYPE;
 BEGIN
   IF p_input_tokens < 0 OR p_output_tokens < 0 THEN RAISE EXCEPTION 'INVALID_AI_USAGE'; END IF;
+  SELECT * INTO b FROM factory_ai_budgets WHERE organization_id=p_organization_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'AI_BUDGET_NOT_CONFIGURED'; END IF;
   SELECT * INTO v FROM factory_ai_invocations WHERE id=p_id AND organization_id=p_organization_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'AI_INVOCATION_NOT_FOUND'; END IF;
   IF v.status <> 'reserved' THEN RETURN jsonb_build_object('status',v.status,'idempotent',true); END IF;
@@ -99,8 +103,12 @@ CREATE OR REPLACE FUNCTION factory_release_ai_invocation(
   p_id UUID, p_organization_id UUID, p_error_code TEXT DEFAULT 'MODEL_REQUEST_FAILED'
 ) RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v factory_ai_invocations%ROWTYPE;
+DECLARE
+  v factory_ai_invocations%ROWTYPE;
+  b factory_ai_budgets%ROWTYPE;
 BEGIN
+  SELECT * INTO b FROM factory_ai_budgets WHERE organization_id=p_organization_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'AI_BUDGET_NOT_CONFIGURED'; END IF;
   SELECT * INTO v FROM factory_ai_invocations WHERE id=p_id AND organization_id=p_organization_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'AI_INVOCATION_NOT_FOUND'; END IF;
   IF v.status <> 'reserved' THEN RETURN jsonb_build_object('status',v.status,'idempotent',true); END IF;
