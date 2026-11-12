@@ -4,7 +4,10 @@
 - [x] Phase 1A: isolated domain contracts, requirement validation, deterministic task DAG validation/planning, starter RBAC matrix, tenant-scope guard, run-state transition guard, PostgreSQL schema draft, run-creation application service, idempotency handling, and unit tests committed on `feat/ultimate-ai-software-factory-v1`.
 - [x] Phase 1B foundation: isolated HTTP handler, HS256 JWT verification adapter, PostgREST repository, project/run endpoints, transactional RPC migration, authentication unit tests, and GitHub Actions validation workflow committed. Not yet mounted in the Worker or verified against a live PostgreSQL instance.
 - [ ] Phase 1B completion: OIDC provider + membership lookup, Worker route integration, real database integration tests, audit query/pagination/rate limits, dashboard shell.
-- [ ] Phases 2–7: not started. No model execution, coding sandbox, durable worker, CI execution, preview deployment, or production release is claimed as implemented.
+- [x] Phase 2A: AI SDK 7 + AI Gateway requirement planner, authenticated plan endpoint, bounded fallback, untrusted-output DAG validation, and tests committed. Live Gateway call and CI pass not yet verified.
+- [x] Phase 2B foundation: Postgres monthly input/output token budgets, atomic reservation/settlement RPCs, per-user invocation ledger, fail-closed budget checks, and adapter tests committed. Currency billing, real Gateway reconciliation, quotas UI, and evaluation suite remain open.
+- [ ] Phase 2C: structured model evaluation, persisted plan versions/approval, provider-level price reconciliation, second-model independent review, and first Coding Harness adapter.
+- [ ] Phases 3–7: not yet implemented. No cloud coding sandbox, durable worker, CI execution, preview deployment, or production release is claimed.
 
 
 ## Phase 0 — Baseline and non-regression
@@ -25,7 +28,7 @@
 - Integrate AI SDK 7 behind an adapter.
 - Add Vercel AI Gateway configuration and provider failover.
 - Add harness adapters (start with one proven coding harness, then add a second independent reviewer).
-- Acceptance: provider contract tests, timeout/cancellation tests, usage/cost recording, prompt redaction tests.
+- Acceptance: provider contract tests, timeout/cancellation tests, atomic monthly token-budget reservation/settlement, provider cost reconciliation, prompt redaction tests.
 
 ## Phase 3 — Sandboxed coding execution
 - Create isolated sandbox per task attempt.
