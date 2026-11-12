@@ -92,7 +92,7 @@ export class VercelSandboxRepositoryRunner {
         });
         if (result.exitCode !== 0) break;
       }
-      const failed = checks.some(check => check.status === "failed");
+      const failed = checks.some(check => check.status === "failed") || !checks.some(check => check.status === "passed");
       return {
         sandboxId, repositoryFullName: input.repositoryFullName, commitSha: input.commitSha,
         status: failed ? "failed" : "passed", checks, startedAt, finishedAt: new Date().toISOString(),
