@@ -10,6 +10,17 @@ export interface FactoryHttpEnv {
   FACTORY_DATABASE_REST_URL: string;
   FACTORY_DATABASE_SERVICE_KEY: string;
 }
+const MAX_BODY_BYTES = 64 * 1024;
+async function readJson(request: Request): Promise<Record<string, unknown>> {
+  const declared = Number(request.headers.get("content-length") ?? "0");
+  if (declared > MAX_BODY_BYTES) throw new Error("REQUEST_TOO_LARGE");
+  const raw = await request.text();
+  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_BYTES) throw new Error("REQUEST_TOO_LARGE");
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); } catch { throw new Error("INVALID_JSON"); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("INVALID_JSON");
+  return parsed as Record<string, unknown>;
+}
 const json = (data: unknown, status = 200): Response => new Response(JSON.stringify(data), {
   status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff" },
 });
@@ -19,7 +30,7 @@ const errors: Record<string, number> = {
   INVALID_TOKEN_ROLE: 401, FORBIDDEN: 403, PROJECT_NOT_FOUND: 404, TENANT_SCOPE_DENIED: 404,
   INVALID_SPEC: 400, INVALID_SPEC_TITLE: 400, INVALID_SPEC_DESCRIPTION: 400, INVALID_SPEC_TARGET: 400,
   INVALID_ACCEPTANCE_CRITERIA: 400, INVALID_CONSTRAINTS: 400, INVALID_PROJECT_ID: 400, INVALID_IDEMPOTENCY_KEY: 400,
-  IDEMPOTENCY_KEY_REUSED: 409,
+  IDEMPOTENCY_KEY_REUSED: 409, INVALID_JSON: 400, INVALID_PROJECT_INPUT: 400, REQUEST_TOO_LARGE: 413,
 };
 
 export async function handleFactoryRequest(request: Request, env: FactoryHttpEnv): Promise<Response> {
@@ -41,7 +52,7 @@ export async function handleFactoryRequest(request: Request, env: FactoryHttpEnv
     }
     if (url.pathname === "/api/factory/projects" && request.method === "POST") {
       if (!canPerform(actor.role, "project:manage")) return json({ error: "FORBIDDEN" }, 403);
-      const body = await request.json() as Record<string, unknown>;
+      const body = await readJson(request);
       const name = typeof body.name === "string" ? body.name.trim() : "";
       const repo = body.repositoryFullName;
       const defaultBranch = typeof body.defaultBranch === "string" ? body.defaultBranch : "main";
