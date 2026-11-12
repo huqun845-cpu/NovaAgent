@@ -58,7 +58,7 @@ $$;
 CREATE OR REPLACE FUNCTION factory_get_run(
   p_organization_id UUID, p_run_id UUID
 ) RETURNS JSONB
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT factory_get_run_by_idempotency(r.organization_id,r.idempotency_key)
   FROM agent_runs r
   WHERE r.organization_id=p_organization_id AND r.id=p_run_id
