@@ -3,12 +3,12 @@
 ## Delivery status (2026-11-13)
 - [x] Phase 1A: isolated domain contracts, requirement validation, deterministic task DAG validation/planning, starter RBAC matrix, tenant-scope guard, run-state transition guard, PostgreSQL schema draft, run-creation application service, idempotency handling, and unit tests committed on `feat/ultimate-ai-software-factory-v1`.
 - [x] Phase 1B foundation: isolated HTTP handler, HS256 JWT verification adapter, PostgREST repository, project/run endpoints, transactional RPC migration, authentication unit tests, and GitHub Actions validation workflow committed. Not yet mounted in the Worker or verified against a live PostgreSQL instance.
-- [ ] Phase 1B completion: OIDC provider + membership lookup, Worker route integration, real database integration tests, audit query/pagination/rate limits, dashboard shell.
+- [x] Phase 1B routing foundation: Factory API mounted on the Cloudflare Worker at `/api/factory/*` before Telegram/D1 request handling. Live PostgreSQL and OIDC/membership integration remain open.
 - [x] Phase 2A: AI SDK 7 + AI Gateway requirement planner, authenticated plan endpoint, bounded fallback, untrusted-output DAG validation, and tests committed. Live Gateway call and CI pass not yet verified.
 - [x] Phase 2B foundation: Postgres monthly input/output token budgets, atomic reservation/settlement RPCs, per-user invocation ledger, fail-closed budget checks, and adapter tests committed. Currency billing, real Gateway reconciliation, quotas UI, and evaluation suite remain open.
 - [ ] Phase 2C: structured model evaluation, persisted plan versions/approval, provider-level price reconciliation, second-model independent review, and first Coding Harness adapter.
 - [x] Phase 3A code foundation: separate Node.js Vercel Sandbox repository-check service, authenticated run/project resolution, immutable commit SHA, install-only egress allowlist then deny-all before scripts, fixed npm check allowlist, mocked tests, and separate deployment docs committed. Not deployed or live-tested; Worker dispatch and durable jobs remain open.
-- [ ] Phase 3B: private-repository credential brokering, patch-capable coding harness, branch/PR workflow, durable job dispatch, executor concurrency and spend quotas.
+- [x] Phase 3B durable execution foundation: tenant-scoped enqueue API, PostgreSQL job ledger, idempotency keys, atomic `SKIP LOCKED` claims, expiring leases/reaping, bounded retries, per-organization concurrency and monthly execution-second reservations, audit/workflow events, and a Vercel Cron consumer with mocked tests. Live migration, real Cron, and Sandbox execution remain unverified.\n- [ ] Phase 3C: private-repository credential brokering, patch-capable coding harness, branch/PR workflow, artifact storage, and stronger global executor spend controls.
 - [ ] Phases 4–7: durable parallel orchestration, repair/review gates, preview/production release and mobile delivery not yet implemented.
 
 
@@ -39,7 +39,15 @@
 - Restrict egress, block metadata/private IP ranges, set CPU/memory/time/disk limits.
 - Acceptance: sandbox escape test plan, network-deny tests, credential non-persistence, workspace cleanup.
 
-## Phase 4 — Workflow and parallel engineering
+
+
+### Phase 3B implementation notes
+- Apply migration `0004_durable_execution_jobs.sql` after migrations 0001–0003 on the dedicated Factory PostgreSQL database.
+- Provision one `factory_execution_budgets` row per organization; missing budgets fail closed. The example provisioning SQL is in `services/factory-executor/README.md`.
+- The Worker enqueues via `POST /api/factory/executions` using a required `Idempotency-Key`; the Vercel Cron consumer polls once per minute and claims at most one job per invocation.
+- Current checks are read-only. The queue is at-least-once: a worker crash can cause a retry after lease expiry. The 240-second reservation is charged in full if a lease expires; completed jobs are charged by measured runtime capped at the reservation.
+- The cron function has a 300-second maximum duration and claims a 300-second lease. Actual deployment plan limits and Cron availability must be checked before enabling production traffic.
+\n## Phase 4 — Workflow and parallel engineering
 - Durable workflow steps with checkpointing.
 - Task dependency DAG and bounded parallelism.
 - Retry with jitter, dead-letter handling, resume after deploy.
