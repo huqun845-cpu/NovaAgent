@@ -81,6 +81,19 @@ BEGIN
   WHERE organization_id=p_organization_id AND id=p_run_id
   FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'RUN_NOT_FOUND'; END IF;
+
+  -- Return the original job before checking run state so retries remain
+  -- idempotent even after the parent run has moved to a terminal state.
+  SELECT * INTO v_job FROM factory_execution_jobs
+    WHERE organization_id=p_organization_id AND idempotency_key=p_idempotency_key;
+  IF FOUND THEN
+    IF v_job.run_id <> p_run_id OR v_job.commit_sha <> lower(p_commit_sha) OR v_job.checks <> v_checks THEN
+      RAISE EXCEPTION 'IDEMPOTENCY_KEY_REUSED';
+    END IF;
+    RETURN jsonb_build_object('id',v_job.id,'runId',v_job.run_id,'status',v_job.status,
+      'attempts',v_job.attempts,'createdAt',v_job.created_at);
+  END IF;
+
   IF v_run.status NOT IN ('queued','running','qa') THEN RAISE EXCEPTION 'RUN_NOT_EXECUTABLE'; END IF;
   SELECT * INTO v_project FROM factory_projects
   WHERE organization_id=p_organization_id AND id=v_run.project_id;
@@ -159,11 +172,15 @@ BEGIN
     RAISE EXCEPTION 'INVALID_WORKER_CLAIM';
   END IF;
   PERFORM factory_reap_expired_execution_jobs();
+  UPDATE factory_execution_budgets
+    SET monthly_used_seconds=0,period_start=date_trunc('month',now())::date,updated_at=now()
+    WHERE period_start < date_trunc('month',now())::date;
 
   FOR v_job IN
     SELECT j.* FROM factory_execution_jobs j
     JOIN factory_execution_budgets b ON b.organization_id=j.organization_id
     WHERE j.status='queued' AND j.available_at <= now()
+      AND b.monthly_used_seconds+b.reserved_seconds+p_reservation_seconds <= b.monthly_limit_seconds
       AND b.active_count < b.max_concurrent
     ORDER BY j.available_at,j.created_at
     LIMIT 1
@@ -172,11 +189,6 @@ BEGIN
     SELECT * INTO v_budget FROM factory_execution_budgets
       WHERE organization_id=v_job.organization_id FOR UPDATE;
     IF NOT FOUND THEN CONTINUE; END IF;
-    IF v_budget.period_start < date_trunc('month',now())::date THEN
-      UPDATE factory_execution_budgets SET monthly_used_seconds=0,
-        period_start=date_trunc('month',now())::date,updated_at=now()
-        WHERE organization_id=v_job.organization_id RETURNING * INTO v_budget;
-    END IF;
     IF v_budget.monthly_used_seconds+v_budget.reserved_seconds+p_reservation_seconds > v_budget.monthly_limit_seconds
        OR v_budget.active_count >= v_budget.max_concurrent THEN
       CONTINUE;
@@ -218,7 +230,7 @@ DECLARE
   v_next_status TEXT;
   v_actual INTEGER;
 BEGIN
-  IF p_status NOT IN ('succeeded','failed') OR p_runtime_seconds < 0 THEN
+  IF p_status IS NULL OR p_status NOT IN ('succeeded','failed') OR p_runtime_seconds IS NULL OR p_runtime_seconds < 0 THEN
     RAISE EXCEPTION 'INVALID_EXECUTION_RESULT';
   END IF;
   SELECT * INTO v_job FROM factory_execution_jobs WHERE id=p_job_id FOR UPDATE;
