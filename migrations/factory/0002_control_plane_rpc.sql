@@ -55,6 +55,16 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   LIMIT 1;
 $$;
 
+CREATE OR REPLACE FUNCTION factory_get_run(
+  p_organization_id UUID, p_run_id UUID
+) RETURNS JSONB
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $
+  SELECT factory_get_run_by_idempotency(r.organization_id,r.idempotency_key)
+  FROM agent_runs r
+  WHERE r.organization_id=p_organization_id AND r.id=p_run_id
+  LIMIT 1;
+$;
+
 CREATE OR REPLACE FUNCTION factory_create_run_bundle(
   p_id UUID,
   p_organization_id UUID,
@@ -126,7 +136,9 @@ END $$;
 
 REVOKE ALL ON FUNCTION factory_create_project(UUID,TEXT,TEXT,TEXT,TEXT) FROM PUBLIC;
 REVOKE ALL ON FUNCTION factory_get_run_by_idempotency(UUID,TEXT) FROM PUBLIC;
+REVOKE ALL ON FUNCTION factory_get_run(UUID,UUID) FROM PUBLIC;
 REVOKE ALL ON FUNCTION factory_create_run_bundle(UUID,UUID,UUID,TEXT,TEXT,JSONB,JSONB,TIMESTAMPTZ) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION factory_create_project(UUID,TEXT,TEXT,TEXT,TEXT) TO service_role;
 GRANT EXECUTE ON FUNCTION factory_get_run_by_idempotency(UUID,TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION factory_get_run(UUID,UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION factory_create_run_bundle(UUID,UUID,UUID,TEXT,TEXT,JSONB,JSONB,TIMESTAMPTZ) TO service_role;
