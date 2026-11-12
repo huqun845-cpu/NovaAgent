@@ -82,6 +82,24 @@ export class PostgrestFactoryRepository implements FactoryRepository {
     if (!row) throw new Error("RUN_CREATE_FAILED");
     return this.run(row as DbRun);
   }
+  async enqueueExecutionJob(input: {
+    organizationId: string; runId: string; actorId: string; commitSha: string;
+    idempotencyKey: string; checks: ("type-check" | "test" | "build" | "lint")[];
+  }): Promise<{ id: string; runId: string; status: string; attempts: number; createdAt: string }> {
+    const row = await this.request<{ id: string; runId: string; status: string; attempts: number; createdAt: string }>(
+      "/rest/v1/rpc/factory_enqueue_execution_job",
+      { method: "POST", body: JSON.stringify({
+        p_organization_id: input.organizationId,
+        p_run_id: input.runId,
+        p_actor_id: input.actorId,
+        p_commit_sha: input.commitSha,
+        p_idempotency_key: input.idempotencyKey,
+        p_checks: input.checks,
+      }) },
+    );
+    if (!row?.id) throw new Error("EXECUTION_ENQUEUE_FAILED");
+    return row;
+  }
   async getRun(organizationId: string, runId: string): Promise<FactoryRunRecord | null> {
     const row = await this.request<DbRun | null>("/rest/v1/rpc/factory_get_run", {
       method: "POST", body: JSON.stringify({ p_organization_id: organizationId, p_run_id: runId }),
