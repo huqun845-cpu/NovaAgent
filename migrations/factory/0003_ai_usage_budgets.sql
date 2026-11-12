@@ -35,8 +35,9 @@ CREATE OR REPLACE FUNCTION factory_reserve_ai_budget(
   p_input_tokens BIGINT, p_output_tokens BIGINT
 ) RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE b factory_ai_budgets%ROWTYPE;
-DECLARE v_period DATE := date_trunc('month', now())::date;
+DECLARE
+  b factory_ai_budgets%ROWTYPE;
+  v_period DATE := date_trunc('month', now())::date;
 BEGIN
   IF p_input_tokens < 0 OR p_output_tokens < 0 OR p_input_tokens + p_output_tokens = 0 THEN RAISE EXCEPTION 'INVALID_AI_RESERVATION'; END IF;
   SELECT * INTO b FROM factory_ai_budgets WHERE organization_id=p_organization_id FOR UPDATE;
