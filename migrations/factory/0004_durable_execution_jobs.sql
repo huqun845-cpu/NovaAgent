@@ -71,9 +71,9 @@ BEGIN
     RAISE EXCEPTION 'INVALID_CHECK_SET';
   END IF;
   IF EXISTS (
-    SELECT 1 FROM jsonb_array_elements_text(v_checks) x
-    WHERE x NOT IN ('type-check','test','build','lint')
-  ) OR (SELECT count(DISTINCT x) FROM jsonb_array_elements_text(v_checks) x) <> jsonb_array_length(v_checks) THEN
+    SELECT 1 FROM jsonb_array_elements_text(v_checks) AS item(value)
+    WHERE item.value NOT IN ('type-check','test','build','lint')
+  ) OR (SELECT count(DISTINCT item.value) FROM jsonb_array_elements_text(v_checks) AS item(value)) <> jsonb_array_length(v_checks) THEN
     RAISE EXCEPTION 'INVALID_CHECK_SET';
   END IF;
 
