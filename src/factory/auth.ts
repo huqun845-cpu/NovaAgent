@@ -43,8 +43,11 @@ export async function authenticateBearer(request: Request, config: FactoryAuthCo
   } catch {
     throw new Error("INVALID_TOKEN");
   }
+  const signatureBytes = new Uint8Array(signature.byteLength);
+  signatureBytes.set(signature);
+  const signatureBuffer = signatureBytes.buffer as ArrayBuffer;
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(config.secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
-  const valid = await crypto.subtle.verify("HMAC", key, signature, new TextEncoder().encode(parts[0] + "." + parts[1]));
+  const valid = await crypto.subtle.verify("HMAC", key, signatureBuffer, new TextEncoder().encode(parts[0] + "." + parts[1]));
   if (!valid) throw new Error("INVALID_TOKEN_SIGNATURE");
   if (claims.iss !== config.issuer || claims.aud !== config.audience) throw new Error("INVALID_TOKEN_CLAIMS");
   if (typeof claims.exp !== "number" || claims.exp <= nowSeconds) throw new Error("TOKEN_EXPIRED");
