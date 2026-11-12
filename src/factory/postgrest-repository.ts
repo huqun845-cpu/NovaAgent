@@ -15,6 +15,19 @@ interface DbRun {
   idempotency_key: string; status: FactoryRunRecord["status"];
   created_at: string; spec: FactoryRunRecord["spec"]; tasks: DbTask[];
 }
+interface DbExecutionJob {
+  id: string; run_id: string; commit_sha: string; checks: string[];
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  attempts: number; max_attempts: number; available_at: string;
+  created_at: string; started_at: string | null; finished_at: string | null;
+  last_error: string | null; result: unknown;
+}
+export interface FactoryExecutionJobRecord {
+  id: string; runId: string; commitSha: string; checks: string[];
+  status: DbExecutionJob["status"]; attempts: number; maxAttempts: number;
+  availableAt: string; createdAt: string; startedAt: string | null;
+  finishedAt: string | null; lastError: string | null; result: unknown;
+}
 export interface FactoryProjectInput { name: string; repositoryFullName?: string | null; defaultBranch?: string; }
 
 export class PostgrestFactoryRepository implements FactoryRepository {
@@ -99,6 +112,22 @@ export class PostgrestFactoryRepository implements FactoryRepository {
     );
     if (!row?.id) throw new Error("EXECUTION_ENQUEUE_FAILED");
     return row;
+  }
+  async getExecutionJob(organizationId: string, jobId: string): Promise<FactoryExecutionJobRecord | null> {
+    const query = new URLSearchParams({
+      select: "id,run_id,commit_sha,checks,status,attempts,max_attempts,available_at,created_at,started_at,finished_at,last_error,result",
+      organization_id: "eq." + organizationId,
+      id: "eq." + jobId,
+      limit: "1",
+    });
+    const rows = await this.request<DbExecutionJob[]>("/rest/v1/factory_execution_jobs?" + query.toString());
+    const row = rows[0];
+    return row ? {
+      id: row.id, runId: row.run_id, commitSha: row.commit_sha.trim(), checks: row.checks,
+      status: row.status, attempts: row.attempts, maxAttempts: row.max_attempts,
+      availableAt: row.available_at, createdAt: row.created_at, startedAt: row.started_at,
+      finishedAt: row.finished_at, lastError: row.last_error, result: row.result,
+    } : null;
   }
   async getRun(organizationId: string, runId: string): Promise<FactoryRunRecord | null> {
     const row = await this.request<DbRun | null>("/rest/v1/rpc/factory_get_run", {
