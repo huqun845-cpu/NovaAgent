@@ -42,6 +42,21 @@ BEGIN
   IF p_input_tokens < 0 OR p_output_tokens < 0 OR p_input_tokens + p_output_tokens = 0 THEN RAISE EXCEPTION 'INVALID_AI_RESERVATION'; END IF;
   SELECT * INTO b FROM factory_ai_budgets WHERE organization_id=p_organization_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'AI_BUDGET_NOT_CONFIGURED'; END IF;
+  WITH expired AS (
+    UPDATE factory_ai_invocations SET status='failed', error_code='RESERVATION_EXPIRED', settled_at=now()
+    WHERE organization_id=p_organization_id AND status='reserved' AND created_at < now()-interval '10 minutes'
+    RETURNING reserved_input_tokens,reserved_output_tokens
+  ), totals AS (
+    SELECT COALESCE(sum(reserved_input_tokens),0) AS input_tokens,
+           COALESCE(sum(reserved_output_tokens),0) AS output_tokens
+    FROM expired
+  )
+  UPDATE factory_ai_budgets SET
+    reserved_input_tokens=GREATEST(0,reserved_input_tokens-(SELECT input_tokens FROM totals)),
+    reserved_output_tokens=GREATEST(0,reserved_output_tokens-(SELECT output_tokens FROM totals)),
+    updated_at=now()
+  WHERE organization_id=p_organization_id;
+
   IF b.period_start <> v_period THEN
     UPDATE factory_ai_budgets SET period_start=v_period, used_input_tokens=0, used_output_tokens=0,
       reserved_input_tokens=0, reserved_output_tokens=0, updated_at=now()
