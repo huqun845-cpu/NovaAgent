@@ -84,14 +84,15 @@ export class AIGatewayRequirementPlanner implements RequirementPlanner {
           ...(this.config.gatewayApiKey ? { headers: { "Authorization": "Bearer " + this.config.gatewayApiKey } } : {}),
         });
         const tasks = parseTaskPlan(result.text);
+        const usage = await result.usage;
         return {
           tasks,
           model,
           fallbackUsed: index > 0,
           usage: {
-            inputTokens: result.usage.inputTokens,
-            outputTokens: result.usage.outputTokens,
-            totalTokens: result.usage.totalTokens,
+            inputTokens: usage.inputTokens,
+            outputTokens: usage.outputTokens,
+            totalTokens: usage.totalTokens,
           },
         };
       } catch (error) {
