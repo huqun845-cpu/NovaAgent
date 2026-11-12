@@ -14,7 +14,7 @@ interface ResponseLike {
 interface WorkerEnv {
   FACTORY_DATABASE_REST_URL?: string;
   FACTORY_DATABASE_SERVICE_KEY?: string;
-  FACTORY_EXECUTOR_CRON_SECRET?: string;
+  CRON_SECRET?: string;
 }
 function header(req: RequestLike, name: string): string {
   const value = req.headers[name] ?? req.headers[name.toLowerCase()];
