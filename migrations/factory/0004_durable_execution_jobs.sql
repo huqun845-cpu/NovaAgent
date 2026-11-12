@@ -60,8 +60,9 @@ DECLARE
   v_project factory_projects%ROWTYPE;
   v_job factory_execution_jobs%ROWTYPE;
   v_checks JSONB := COALESCE(p_checks, '["type-check","test","build"]'::jsonb);
+  v_inserted INTEGER := 0;
 BEGIN
-  IF p_commit_sha !~ '^[a-f0-9]{40}$' OR p_idempotency_key IS NULL
+  IF p_commit_sha IS NULL OR p_commit_sha !~ '^[a-f0-9]{40}$' OR p_idempotency_key IS NULL
      OR length(p_idempotency_key) < 8 OR length(p_idempotency_key) > 160 THEN
     RAISE EXCEPTION 'INVALID_EXECUTION_INPUT';
   END IF;
@@ -92,6 +93,7 @@ BEGIN
   ) VALUES (
     p_organization_id,v_run.project_id,p_run_id,lower(p_commit_sha),v_checks,p_idempotency_key,p_actor_id
   ) ON CONFLICT (organization_id,idempotency_key) DO NOTHING;
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
 
   SELECT * INTO v_job FROM factory_execution_jobs
   WHERE organization_id=p_organization_id AND idempotency_key=p_idempotency_key;
@@ -99,10 +101,11 @@ BEGIN
     RAISE EXCEPTION 'IDEMPOTENCY_KEY_REUSED';
   END IF;
 
-  INSERT INTO audit_events(organization_id,actor_id,action,target_type,target_id,outcome,metadata)
-  VALUES(p_organization_id,p_actor_id,'execution.enqueue','execution_job',v_job.id::text,'success',
-    jsonb_build_object('run_id',p_run_id,'commit_sha',lower(p_commit_sha),'status',v_job.status))
-  ON CONFLICT DO NOTHING;
+  IF v_inserted > 0 THEN
+    INSERT INTO audit_events(organization_id,actor_id,action,target_type,target_id,outcome,metadata)
+    VALUES(p_organization_id,p_actor_id,'execution.enqueue','execution_job',v_job.id::text,'success',
+      jsonb_build_object('run_id',p_run_id,'commit_sha',lower(p_commit_sha),'status',v_job.status));
+  END IF;
   RETURN jsonb_build_object('id',v_job.id,'runId',v_job.run_id,'status',v_job.status,
     'attempts',v_job.attempts,'createdAt',v_job.created_at);
 END $$;
